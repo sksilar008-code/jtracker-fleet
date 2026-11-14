@@ -36,6 +36,11 @@ $ptu = Join-Path $logDir "pending-tracker-updates.json"
 if (Test-Path $ptu) { Copy-Item $ptu (Join-Path $stateLogs "pending-tracker-updates.json") -Force }
 
 # ---- 2) commit + push state (remote already carries the token from the clone step) ----
+# NOTE: git writes push progress ("To https://...", branch lines) to STDERR. Under
+# $ErrorActionPreference="Stop" PowerShell turns that into a fatal NativeCommandError and
+# kills the script AFTER a successful push (broke run #2). Go permissive for git calls;
+# real failures are caught via $LASTEXITCODE throws below.
+$ErrorActionPreference = "Continue"
 Push-Location $StateDir
 try {
     git add -A 2>&1 | Write-Host
@@ -44,6 +49,7 @@ try {
     if ($dirty.Count -gt 0) {
         git -c user.name="jtracker-bot" -c user.email="jtracker-bot@users.noreply.github.com" `
             commit -m "state update $stamp" 2>&1 | Write-Host
+        if ($LASTEXITCODE) { throw "state commit failed (exit $LASTEXITCODE)" }
         git push 2>&1 | Write-Host
         if ($LASTEXITCODE) { throw "state push failed (exit $LASTEXITCODE)" }
         Write-Host "STATE PUSHED: $($dirty.Count) changed path(s)"
