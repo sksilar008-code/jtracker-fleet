@@ -20,11 +20,13 @@ GitHub Windows machine: clone state → init → pipeline → push state back. Y
 MinGit 2.56 + GitHub CLI 2.103 in `%LOCALAPPDATA%\Programs\` (on your PATH for new terminals).
 
 ### Step 2 — sign in to GitHub (YOU do this, in your browser — I never see your password)
-Run in a terminal:
-```
-gh auth login --hostname github.com --git-protocol https --web
-```
-Press Enter → open the shown URL → type the one-time code → approve in your browser.
+The web device flow (`gh auth login --web`) **fails on this network** (broken IPv6 resets
+`github.com/login/oauth/*`; api.github.com and git-over-HTTPS are fine). Use the token path:
+1. In the browser: GitHub → Settings → Developer settings → Personal access tokens →
+   **Tokens (classic)** → Generate new token (classic): **No expiration**, scopes
+   **`repo`** + **`workflow`** (both required — no scopes = "token has not been granted
+   the required scopes" on repo create).
+2. In a terminal: `gh auth login` → GitHub.com → HTTPS → **Paste an authentication token** → paste → Enter.
 
 ### Step 3 — create repos + push code *(I run this after Step 2)*
 ```
@@ -68,6 +70,16 @@ Disable-ScheduledTask -TaskName HuntBot-min
 - **Viewing results:** `jtracker-state` → `JobTracker.xlsx` on github.com (any device),
   or download it. The OneDrive copy on your PC becomes a read-only snapshot after cutover.
 - **60-day keepalive:** handled automatically (empty commit pushed when quiet >6 days).
+
+## Troubleshooting (already hit during go-live)
+- **`Init cloud environment` fails with `Cannot bind argument to parameter 'Path' ... empty string`
+  and `project=` prints blank:** PS5.1 quirk — `$PSScriptRoot` evaluates **empty** in a
+  param *default* when an earlier param is `[Parameter(Mandatory)]`. Fix (applied in both
+  cloud scripts): default the param to `""` and resolve `$PSScriptRoot` in the body.
+- **`gh` device flow dies with "error connecting to github.com":** see Step 2 (network
+  blocks the OAuth endpoint; use token paste instead).
+- **First push of personal files:** `.gitignore` must list them BEFORE `git add` — files
+  already tracked are NOT un-ignored automatically; use `git rm --cached <file>`.
 
 ## Rollback
 Re-enable the PC tasks (Step 7) and/or disable the workflow under Actions → JTracker Fleet → … → Disable workflow.
