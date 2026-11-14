@@ -1,0 +1,24 @@
+# --- never publish: local config (PII + keys) and live session state ---
+config.json
+edge-profile/
+logs/
+drain-pending.flag
+pending-tracker-updates.json
+*.log
+
+# --- personal data / outreach material: stays local, never in the public repo ---
+Silar_Shaik_BIM_Coordinator_CV.pdf
+SEND_STATION.html
+EMAIL_BODY.txt
+Job_Search_Outreach_Email.md
+YOUR_Call_Sheet_BIM.md
+YOUR_Engineering_Email_and_Plan.md
+UAE_Recruitment_Agencies_List.md
+AGENCY_EMAILS.csv
+reports/
+Future Map for BIM Technicians 2026-2035.pptx
+
+# --- runtime junk ---
+True
+False
+.opencode/

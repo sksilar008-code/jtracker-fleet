@@ -1,0 +1,54 @@
+# JTracker Fleet - runs the job-search pipeline on GitHub's Windows machines.
+# Public repo = standard Windows runners are FREE and unlimited ($0, no card).
+# All personal data (tracker/cookies/CVs/config) lives in the PRIVATE state repo
+# cloned at runtime via the STATE_PAT / STATE_REPO secrets.
+name: JTracker Fleet
+
+on:
+  schedule:
+    # Dubai is UTC+4: these are 06:00 / 12:00 / 18:00 / 00:00 Dubai time
+    - cron: '0 2,8,14,20 * * *'
+  workflow_dispatch: # manual trigger for tests (gh workflow run)
+
+# GITHUB_TOKEN needs write to push the schedule keepalive commit
+permissions:
+  contents: write
+
+# never run two fleets at once (they would fight over the tracker + email cap)
+concurrency:
+  group: jtracker-fleet
+  cancel-in-progress: false
+
+jobs:
+  pipeline:
+    runs-on: windows-latest
+    timeout-minutes: 120
+    env:
+      JTRACKER_CLOUD: '1'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Clone private state repo
+        shell: powershell
+        env:
+          STATE_PAT: ${{ secrets.STATE_PAT }}
+          STATE_REPO: ${{ secrets.STATE_REPO }}
+        run: |
+          if (-not $env:STATE_PAT)   { throw "STATE_PAT secret missing   - see CLOUD-SETUP.md step 5" }
+          if (-not $env:STATE_REPO)  { throw "STATE_REPO secret missing  - see CLOUD-SETUP.md step 5" }
+          git clone "https://x-access-token:$($env:STATE_PAT)@github.com/$($env:STATE_REPO).git" state
+          if ($LASTEXITCODE) { throw "state clone failed - check STATE_PAT/STATE_REPO" }
+
+      - name: Init cloud environment
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File .\Init-CloudEnv.ps1 -StateDir .\state
+
+      - name: Run fleet pipeline
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File .\Run-Pipeline.ps1
+
+      - name: Save state
+        if: always()
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File .\Save-CloudState.ps1 -StateDir .\state

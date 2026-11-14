@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Door Inventory</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#2563eb" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Door Inventory" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+
+    <!-- Install banner (PWA) -->
+    <div class="install-banner" id="installBanner" role="alert" aria-live="polite">
+      <span>Install “Door Inventory” on your home screen?</span>
+      <button id="installBtn">Install</button>
+    </div>
+
+    <!-- Header -->
+    <header class="header">
+      <h1>🚪 Door Inventory</h1>
+      <div class="subtitle">Track models, vendors, sizes, and stock for your shop</div>
+      <div class="status-bar">
+        <span class="status-dot" id="statusDot"></span>
+        <span id="statusText">Loading…</span>
+      </div>
+    </header>
+
+    <!-- Stats -->
+    <div class="stats">
+      <div class="stat-card">
+        <div class="label">Door Models</div>
+        <div class="value" id="statTotalItems">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Total Pieces</div>
+        <div class="value" id="statTotalQty">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Stock Value</div>
+        <div class="value" id="statTotalValue">$0.00</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Low Stock (≤5)</div>
+        <div class="value" id="statLowStock">0</div>
+      </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <button class="btn btn-primary" id="addBtn">+ Add Door</button>
+      <button class="btn btn-primary" id="receiveBtn">📥 Receive Bill</button>
+      <input type="text" id="searchInput" placeholder="Search model, vendor, size…" />
+      <select id="vendorFilter"></select>
+      <button class="btn btn-ghost btn-sm" id="exportBtn">⬇️ Export CSV</button>
+      <input type="file" id="importFile" accept=".csv" style="display:none;" />
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('importFile').click()">⬆️ Import CSV</button>
+      <button class="btn btn-danger btn-sm" id="clearBtn">🗑️ Clear All</button>
+    </div>
+
+    <!-- Empty state -->
+    <div class="empty" id="emptyState" style="display:none;">
+      <h3>No doors in inventory yet</h3>
+      <p>Tap “+ Add Door” or “Receive Bill” to add your first item.</p>
+    </div>
+
+    <!-- Inventory table -->
+    <div class="inventory">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Model / Vendor / Door #</th>
+              <th>Size</th>
+              <th>Qty</th>
+              <th>Price / Unit</th>
+              <th>Value</th>
+              <th>Location</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Export card -->
+    <div class="export-card" id="exportCard" style="display:none;">
+      <div style="font-weight:600; margin-bottom:0.5rem;">Quick Backup</div>
+      <p class="small">Download a CSV copy of your inventory anytime. Keep it on your phone or email it to yourself.</p>
+    </div>
+
+  </div>
+
+  <!-- Add / Edit Door Modal -->
+  <div class="modal-overlay" id="addModal" aria-modal="true">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="modalTitle">Add Door Stock</h2>
+        <button class="close-modal" data-close-modal>&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="addForm">
+          <input type="hidden" id="doorId" />
+          <div class="form-group">
+            <label>Model Number</label>
+            <input id="addModel" placeholder="e.g. D-200-OAK" required />
+          </div>
+          <div class="form-group">
+            <label>Vendor</label>
+            <input id="addVendor" placeholder="e.g. ABC Doors Co." />
+          </div>
+          <div class="form-group">
+            <label>Size (as written on paper)</label>
+            <input id="addSize" placeholder="e.g. 36x80" required />
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Quantity Received</label>
+              <input id="addQty" type="number" min="0" value="0" required />
+            </div>
+            <div class="form-group">
+              <label>Price Per Unit</label>
+              <input id="addPrice" type="number" min="0" step="0.01" value="0" required />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Storage Location (bin / rack)</label>
+            <input id="addLocation" placeholder="e.g. Aisle B, Shelf 3" />
+          </div>
+          <div class="form-group">
+            <label>Door Number (from paper ticket)</label>
+            <input id="addDoorNumber" placeholder="optional reference" />
+          </div>
+          <div id="createdAtField" class="form-group" style="display:none;">
+            <label>First Added</label>
+            <div class="small" id="createdAtValue"></div>
+          </div>
+          <p class="hint">Tip: “Receive Bill” adds to an existing item instead of creating a duplicate.</p>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-ghost" data-close-modal>Cancel</button>
+            <button type="submit" class="btn btn-primary">Save</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Receive Stock / Vendor Bill Modal -->
+  <div class="modal-overlay" id="receiveModal" aria-modal="true">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="receiveModalTitle">New Vendor Bill</h2>
+        <button class="close-modal" data-close-modal>&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="receiveForm">
+          <input type="hidden" id="receiveDoorId" />
+          <div class="form-group">
+            <label>Model Number</label>
+            <input id="receiveModel" placeholder="e.g. D-200-OAK" required />
+          </div>
+          <div class="form-group">
+            <label>Vendor</label>
+            <input id="receiveVendor" placeholder="e.g. ABC Doors Co." />
+          </div>
+          <div class="form-group">
+            <label>Size (from bill)</label>
+            <input id="receiveSize" placeholder="e.g. 36x80" required />
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Door Count (from bill)</label>
+              <input id="receiveQty" type="number" min="1" value="1" required />
+            </div>
+            <div class="form-group">
+              <label>Price Per Unit (from bill)</label>
+              <input id="receivePrice" type="number" min="0" step="0.01" value="0" required />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Door Number (from paper)</label>
+            <input id="receiveDoorNumber" placeholder="optional reference" />
+          </div>
+          <div class="form-group">
+            <label>Storage Location</label>
+            <input id="receiveLocation" placeholder="where it is stored" />
+          </div>
+          <div class="form-group">
+            <label>Notes</label>
+            <input id="receiveNote" placeholder="e.g. PO #123" />
+          </div>
+          <div id="receiveCreatedAtField" class="form-group" style="display:none;">
+            <label>Original Order Date</label>
+            <div class="small" id="receiveCreatedAtValue"></div>
+          </div>
+          <p class="hint">If this model+size already exists, the count is added to current stock and price is updated.</p>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-ghost" data-close-modal>Cancel</button>
+            <button type="submit" class="btn btn-primary">Receive Stock</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Export CSV Modal -->
+  <div class="modal-overlay" id="exportModal" aria-modal="true">
+    <div class="modal" style="max-height:75vh;">
+      <div class="modal-header">
+        <h2>Export Inventory (CSV)</h2>
+        <button class="close-modal" data-close-modal>&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="small">Copy the text below, or tap download to save a file to your phone.</p>
+        <pre id="csvOutput" style="background:#f3f4f6;padding:0.75rem;border-radius:0.5rem;overflow:auto;white-space:pre-wrap;font-size:0.8rem;"></pre>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="closeExport">Close</button>
+        <a id="downloadCsv" class="btn btn-primary" download>Download CSV</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Confirm -->
+  <div class="modal-overlay" id="deleteConfirmModal" aria-modal="true">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Delete Item?</h2>
+        <button class="close-modal" data-close-modal>&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>This will permanently remove the door record from your phone.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" data-close-modal>Cancel</button>
+        <button class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
