@@ -6,9 +6,12 @@ name: JTracker Fleet
 
 on:
   schedule:
-    # TEMPORARY schedule probe (fires every 10 min to prove cron works) -
-    # revert to '0 2,8,14,20 * * *' (06/12/18/00 Dubai) once a schedule run appears
-    - cron: '*/10 * * * *'
+    # NOTE (2026-11-14): GitHub's cron scheduler is currently broken platform-wide
+    # (community discussions #206019/#205984 - state:active but zero schedule runs).
+    # Kept as redundancy: when it recovers, both native and the external trigger
+    # (cron-job.org -> workflow_dispatch) fire; concurrency + the 8/day email cap
+    # make double runs harmless.
+    - cron: '0 2,8,14,20 * * *'
   workflow_dispatch: # manual trigger for tests (gh workflow run)
 
 # GITHUB_TOKEN needs write to push the schedule keepalive commit
