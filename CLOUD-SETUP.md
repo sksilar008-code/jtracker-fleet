@@ -51,9 +51,8 @@ gh workflow run "JTracker Fleet" --repo <you>/jtracker-fleet
 gh run watch --repo <you>/jtracker-fleet
 ```
 
-### Step 7 — CUTOVER (important: prevents double-sends)
-Once the first cloud run is green, disable the PC scheduled tasks so the two fleets
-never run at the same time against different tracker copies:
+### Step 7 — CUTOVER ✅ DONE (2026-11-14, after first fully-green cloud run 43556072909)
+Both PC scheduled tasks disabled — cloud is now the only fleet:
 ```
 Disable-ScheduledTask -TaskName SearchMachine2-Pipeline
 Disable-ScheduledTask -TaskName HuntBot-min
