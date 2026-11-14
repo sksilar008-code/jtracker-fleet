@@ -9,9 +9,12 @@
 #>
 param(
     [Parameter(Mandatory)][string]$StateDir,
-    [string]$ProjectDir = $PSScriptRoot
+    [string]$ProjectDir = ""
 )
 $ErrorActionPreference = "Stop"
+# NOTE: $PSScriptRoot is empty in param defaults when an earlier param is Mandatory
+# (PS5.1 quirk) - resolve in the body instead
+if (-not $ProjectDir) { $ProjectDir = $PSScriptRoot }
 $StateDir = (Resolve-Path $StateDir).Path
 $stamp = Get-Date -Format "yyyy-MM-dd HH:mm"
 

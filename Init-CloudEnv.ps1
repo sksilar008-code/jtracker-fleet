@@ -10,9 +10,12 @@
 #>
 param(
     [Parameter(Mandatory)][string]$StateDir,
-    [string]$ProjectDir = $PSScriptRoot
+    [string]$ProjectDir = ""
 )
 $ErrorActionPreference = "Stop"
+# NOTE: $PSScriptRoot evaluates EMPTY in a param default when an earlier param is
+# Mandatory (PS5.1 quirk, broke the first cloud run) - resolve it in the body instead
+if (-not $ProjectDir) { $ProjectDir = $PSScriptRoot }
 $StateDir = (Resolve-Path $StateDir).Path
 Write-Host "Init-CloudEnv: state=$StateDir"
 Write-Host "Init-CloudEnv: project=$ProjectDir"
