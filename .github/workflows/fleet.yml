@@ -6,12 +6,15 @@ name: JTracker Fleet
 
 on:
   schedule:
-    # NOTE (2026-11-14): GitHub's cron scheduler is currently broken platform-wide
-    # (community discussions #206019/#205984 - state:active but zero schedule runs).
-    # Kept as redundancy: when it recovers, both native and the external trigger
-    # (cron-job.org -> workflow_dispatch) fire; concurrency + the 8/day email cap
-    # make double runs harmless.
-    - cron: '0 2,8,14,20 * * *'
+    # NOTE (2026-11-14): GitHub's cron scheduler is flaky platform-wide (community
+    # discussions #206019/#205984): fires hours late or gets missed entirely.
+    # Kept as redundancy - cron-job.org -> workflow_dispatch is the reliable
+    # trigger; concurrency + the 8/day email cap make double runs harmless.
+    # Cadence per user 2026-11-16 (times below in Dubai = UTC+4):
+    #   Mon-Fri: every 3h -> 04,07,10,13,16,19,22 Dubai
+    - cron: '0 */3 * * 1-5'
+    #   Sat-Sun: 3x/day -> 06,12,18 Dubai
+    - cron: '0 2,8,14 * * 0,6'
   workflow_dispatch: # manual trigger for tests (gh workflow run)
 
 # GITHUB_TOKEN needs write to push the schedule keepalive commit
